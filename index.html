@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Infiltrómetro Master v22</title>
+    <title>Infiltrómetro Master v23</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -22,7 +22,7 @@
         .btn-stop { background: var(--stop); }
         .btn-reset { background: var(--reset); }
 
-        /* LISTA PRINCIPAL */
+        /* CONTENIDO */
         .container { padding: 15px; flex-grow: 1; }
         .station-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 8px solid var(--primary); display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .station-info { flex-grow: 1; cursor: pointer; }
@@ -56,7 +56,7 @@
 <body>
 
 <div id="home-screen" class="screen">
-    <div style="background: #333; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.2em;">INFILTRÓMETRO PRO V22</div>
+    <div style="background: #333; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.2em;">INFILTRÓMETRO PRO V23</div>
     <div class="container">
         <button class="btn-main" onclick="createNewStation()">+ NUEVO PUNTO DE MEDICIÓN</button>
         <div id="station-list"></div>
@@ -103,9 +103,9 @@
     let stations = [];
     let currentIdx = null;
     let audioCtx = null;
-    let settings = JSON.parse(localStorage.getItem('soil_v22_settings')) || { bgTimers: true };
+    let settings = JSON.parse(localStorage.getItem('soil_v23_settings')) || { bgTimers: true };
 
-    const dbName = "InfiltrometerV22DB";
+    const dbName = "InfiltrometerV23DB";
     let db;
     const request = indexedDB.open(dbName, 1);
     request.onupgradeneeded = (e) => { e.target.result.createObjectStore("stations", { keyPath: "id", autoIncrement: true }); };
@@ -123,24 +123,31 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    // ALARMA POTENTE REFORZADA
+    // SONIDO MEJORADO (VERSIÓN 23)
     function playAlarm(freq, type) {
         initAudio();
         const now = audioCtx.currentTime;
-        const duration = type === 'short' ? 0.5 : 2.5;
-        const count = type === 'short' ? 1 : 5;
-
-        for (let i = 0; i < count; i++) {
+        
+        if (type === 'short') {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(freq, now + (i * 0.5));
-            gain.gain.setValueAtTime(0, now + (i * 0.5));
-            gain.gain.linearRampToValueAtTime(0.8, now + (i * 0.5) + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + (i * 0.5) + 0.4);
-            osc.start(now + (i * 0.5));
-            osc.stop(now + (i * 0.5) + 0.4);
+            osc.type = 'square'; osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now); osc.stop(now + 0.5);
+        } else {
+            // Alarma continua de 2 segundos para tiempo cumplido
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'square'; osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.8, now + 0.1);
+            gain.gain.setValueAtTime(0.8, now + 1.9);
+            gain.gain.linearRampToValueAtTime(0, now + 2.0);
+            osc.start(now); osc.stop(now + 2.1);
         }
     }
 
@@ -152,18 +159,25 @@
                     const newSecs = Math.floor((now - s.startTime) / 1000);
                     if (newSecs !== s.seconds) {
                         s.seconds = newSecs;
-                        const target = getTargetByTime(i);
-                        if (target) {
-                            const targetSecs = target.accumulatedMin * 60;
-                            // Alerta 10s antes (Solo una vez)
-                            if (s.seconds === targetSecs - 10 && s.lastAlarm !== 'short' + target.index) { 
-                                s.lastAlarm = 'short' + target.index;
+                        
+                        // RECORRER TODAS LAS FILAS PARA BUSCAR ALERTAS
+                        let accMin = 0;
+                        let lastZeroIdx = 0;
+                        for (let j = 0; j < s.rows.length; j++) { if (s.rows[j].time == 0) lastZeroIdx = j; }
+
+                        for (let j = lastZeroIdx + 1; j < s.rows.length; j++) {
+                            accMin += parseFloat(s.rows[j].time || 0);
+                            const targetSecs = accMin * 60;
+
+                            // Alerta 10s antes
+                            if (s.seconds === targetSecs - 10 && s.lastAlarm !== 'short' + j) {
+                                s.lastAlarm = 'short' + j;
                                 playAlarm(700, 'short');
                                 if(navigator.vibrate) navigator.vibrate(400);
                             }
-                            // Alerta Meta (Solo una vez)
-                            if (s.seconds >= targetSecs && s.lastAlarm !== 'long' + target.index) { 
-                                s.lastAlarm = 'long' + target.index;
+                            // Alerta Tiempo Cumplido (Bip prolongado)
+                            if (s.seconds === targetSecs && s.lastAlarm !== 'long' + j) {
+                                s.lastAlarm = 'long' + j;
                                 playAlarm(500, 'long');
                                 if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
                             }
@@ -221,6 +235,12 @@
             div.innerHTML = `<div class="station-info" onclick="openStation(${s.id})"><strong>${s.name}</strong> <span class="${s.isRunning ? 'status-on' : 'status-off'}">${s.isRunning ? 'ON' : 'OFF'}</span><br><small>Muestras: ${s.rows.filter(r=>r.value).length}</small></div><div class="station-actions"><span onclick="renameStationById(${s.id})">✏️</span><span onclick="deleteStationById(${s.id})">🗑️</span></div>`;
             list.appendChild(div);
         });
+    }
+
+    function renameStationById(id) {
+        const idx = stations.findIndex(s => s.id === id);
+        const n = prompt("Nuevo nombre:", stations[idx].name);
+        if (n) { stations[idx].name = n; saveToDB(stations[idx]); renderHistory(); }
     }
 
     function openStation(id) {
@@ -286,12 +306,6 @@
         document.getElementById('timer-display').innerText = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     }
 
-    function renameStationById(id) {
-        const idx = stations.findIndex(s => s.id === id);
-        const n = prompt("Nuevo nombre:", stations[idx].name);
-        if (n) { stations[idx].name = n; saveToDB(stations[idx]); renderHistory(); }
-    }
-
     function deleteStationById(id) {
         if(confirm("¿Eliminar punto?")) {
             db.transaction(["stations"], "readwrite").objectStore("stations").delete(id).onsuccess = () => {
@@ -312,7 +326,7 @@
 
     function saveSettings() {
         settings.bgTimers = document.getElementById('bg-timer-toggle').checked;
-        localStorage.setItem('soil_v22_settings', JSON.stringify(settings));
+        localStorage.setItem('soil_v23_settings', JSON.stringify(settings));
     }
 
     function handlePhotoCapture(input) {
@@ -367,7 +381,7 @@
         zip.file("Datos_Infiltracion.xlsx", XLSX.write(wb, {bookType:'xlsx', type:'array'}));
         const content = await zip.generateAsync({type:"blob"});
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(content); a.download = `Suelos_v22.zip`; a.click();
+        a.href = URL.createObjectURL(content); a.download = `Suelos_v23.zip`; a.click();
     }
 
     window.onload = () => { document.getElementById('bg-timer-toggle').checked = settings.bgTimers; };
