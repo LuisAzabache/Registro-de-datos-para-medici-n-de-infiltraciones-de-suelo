@@ -3,87 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Infiltrómetro Master v16 - Galería</title>
-    <!-- Librerías -->
+    <title>Infiltrómetro Master v22</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root { --primary: #007bff; --stop: #ff9800; --reset: #dc3545; --bg: #f4f7f9; --text: #333; --success: #28a745; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); -webkit-tap-highlight-color: transparent; height: 100vh; overflow: hidden; }
         
-        /* HEADER FIJO */
-        .header-timer { position: sticky; top: 0; z-index: 1000; background: #1a1a1a; color: #00ff00; text-align: center; padding: 10px; border-bottom: 3px solid #333; }
-        #timer-display { font-size: 3.5em; font-family: monospace; font-weight: bold; margin: 2px 0; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; z-index: 10; }
+        .hidden { display: none !important; }
+
+        /* HEADER */
+        .header-timer { position: sticky; top: 0; z-index: 1000; background: #000; color: #0f0; text-align: center; padding: 10px; border-bottom: 3px solid #333; }
+        #timer-display { font-size: 3.8em; font-family: monospace; font-weight: bold; margin: 2px 0; }
         .timer-controls { display: flex; gap: 8px; justify-content: center; padding: 5px 10px; }
-        .btn-t { flex: 1; padding: 12px 5px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; text-transform: uppercase; font-size: 0.8em; }
+        .btn-t { flex: 1; padding: 14px 5px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; text-transform: uppercase; font-size: 0.85em; }
         .btn-start { background: var(--success); }
         .btn-stop { background: var(--stop); }
         .btn-reset { background: var(--reset); }
 
-        .container { padding: 15px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 15px; }
-        
-        /* ESTACIONES */
-        .station-item { background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; border-left: 8px solid var(--primary); display: flex; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; }
-        .station-info { flex-grow: 1; }
-        .status-pill { font-size: 0.65em; padding: 2px 6px; border-radius: 4px; background: #eee; font-weight: bold; }
-        .status-pill.active { background: var(--success); color: white; }
+        /* LISTA PRINCIPAL */
+        .container { padding: 15px; flex-grow: 1; }
+        .station-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 8px solid var(--primary); display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .station-info { flex-grow: 1; cursor: pointer; }
+        .status-on { color: var(--success); font-weight: bold; }
+        .status-off { color: #000; font-weight: bold; }
+        .station-actions { display: flex; gap: 20px; padding-left: 15px; font-size: 1.5em; align-items: center; }
 
         /* TABLA */
-        .table-container { overflow-x: auto; background: white; border-radius: 12px; }
+        .table-container { overflow-x: auto; background: white; border-radius: 12px; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; min-width: 300px; }
-        th, td { border-bottom: 1px solid #eee; padding: 12px 4px; text-align: center; }
-        th { background: #f8f9fa; font-size: 0.7em; color: #888; text-transform: uppercase; }
-        input { width: 85%; padding: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 1.1em; text-align: center; }
-        .row-target { background: #e8f0fe !important; outline: 2px solid var(--primary); }
-        .row-refill { background: #fff9e6 !important; font-weight: bold; }
+        th, td { border-bottom: 1px solid #eee; padding: 15px 5px; text-align: center; }
+        input { width: 90%; padding: 12px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1.2em; text-align: center; }
+        
+        .row-target { background: #d1e7ff !important; outline: 3px solid var(--primary); font-weight: bold; }
+        .row-refill { background: #fff3cd !important; }
+        
+        .gallery { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; }
+        .photo-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid #ddd; }
+        
+        .btn-main { width: 100%; padding: 20px; font-size: 1.1em; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
 
-        /* GALERÍA DE FOTOS */
-        .gallery { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
-        .photo-wrapper { position: relative; flex-shrink: 0; }
-        .photo-thumb { width: 90px; height: 90px; border-radius: 8px; object-fit: cover; border: 2px solid #ddd; }
-        .btn-del-photo { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 22px; height: 22px; border: none; font-size: 12px; cursor: pointer; }
-        .btn-add-photo { background: #6c757d; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
-
-        .hidden { display: none; }
-        .btn-main { width: 100%; padding: 18px; font-size: 1.1em; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,123,255,0.25); }
-
-        /* TOGGLE SWITCH */
-        .settings-card { background: white; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .settings-card { background: white; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; margin-top: 15px; border: 1px solid #ddd; }
+        .switch { position: relative; width: 50px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--success); }
-        input:checked + .slider:before { transform: translateX(22px); }
+        input:checked + .slider:before { transform: translateX(24px); }
     </style>
 </head>
 <body>
 
-<div id="home-screen">
-    <div style="background: #333; color: white; padding: 18px; text-align: center; font-weight: bold;">INFILTRÓMETRO PRO V16</div>
+<div id="home-screen" class="screen">
+    <div style="background: #333; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.2em;">INFILTRÓMETRO PRO V22</div>
     <div class="container">
         <button class="btn-main" onclick="createNewStation()">+ NUEVO PUNTO DE MEDICIÓN</button>
         <div id="station-list"></div>
-
         <div class="settings-card">
-            <div style="font-size: 0.9em;"><strong>⏱️ Multitarea</strong><br><small style="color:#777">Tiempo corre en 2do plano</small></div>
-            <label class="switch">
-                <input type="checkbox" id="bg-timer-toggle" onchange="saveSettings()" checked>
-                <span class="slider"></span>
-            </label>
+            <div><strong>⏱️ Modo Multitarea</strong><br><small>El tiempo sigue al salir del punto</small></div>
+            <label class="switch"><input type="checkbox" id="bg-timer-toggle" onchange="saveSettings()" checked><span class="slider"></span></label>
         </div>
-
         <button onclick="packageAllData()" style="width: 100%; padding: 16px; background: #444; color: white; border: none; border-radius: 10px; font-weight: bold; margin-top: 20px;">📦 EXPORTAR PROYECTO (ZIP)</button>
     </div>
 </div>
 
-<div id="measurement-screen" class="hidden">
+<div id="measurement-screen" class="screen hidden">
     <div class="header-timer">
-        <div style="display:flex; justify-content: space-between; font-size: 0.7em; padding-bottom: 5px; align-items: center;">
-            <span onclick="goToHome()" style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 5px; color: #5fb0ff; font-weight: bold; cursor: pointer;">⬅ VOLVER</span>
-            <span id="active-station-name">---</span>
-            <span id="target-label" style="color: #00ff00; font-weight: bold;">OBJ: --</span>
+        <div style="display:flex; justify-content: space-between; font-size: 0.75em; align-items: center;">
+            <span onclick="goToHome()" style="color: #007bff; font-weight: bold; padding: 5px; cursor: pointer;">⬅ VOLVER</span>
+            <span id="active-name">---</span>
+            <span id="target-label" style="color: #0f0;">OBJ: --</span>
         </div>
         <div id="timer-display">00:00</div>
         <div class="timer-controls">
@@ -92,25 +82,20 @@
             <button class="btn-t btn-reset" onclick="uiTimerReset()">Restablecer</button>
         </div>
     </div>
-
     <div class="container">
-        <!-- SECCIÓN DE GALERÍA -->
-        <div class="card">
-            <div id="photo-gallery" class="gallery">
-                <!-- Miniaturas aparecerán aquí -->
-            </div>
+        <div class="card" style="margin-bottom:10px; padding:10px">
+            <div id="photo-gallery" class="gallery"></div>
             <input type="file" id="camera-input" accept="image/*" capture="camera" class="hidden" onchange="handlePhotoCapture(this)">
-            <button class="btn-add-photo" onclick="document.getElementById('camera-input').click()">📸 AÑADIR FOTO AL PUNTO</button>
+            <button onclick="document.getElementById('camera-input').click()" style="width:100%; padding:10px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold;">📸 AÑADIR FOTO</button>
         </div>
-
         <div class="table-container">
-            <table id="measure-table">
+            <table>
                 <thead><tr><th>ID</th><th>Tiempo (m)</th><th>Lectura (cm)</th><th>Tipo</th></tr></thead>
                 <tbody id="measure-body"></tbody>
             </table>
         </div>
         <button onclick="addNewRow()" style="width:100%; padding:18px; margin-top:12px; background:var(--primary); color:white; border:none; border-radius:12px; font-weight:bold;">+ AÑADIR CASILLA</button>
-        <button onclick="deleteStation()" style="width:100%; padding:10px; margin-top:30px; background:none; color:red; border:1px solid red; border-radius:10px; font-size:0.8em;">ELIMINAR PUNTO</button>
+        <button onclick="deleteStationInternal()" style="width:100%; padding:10px; margin-top:30px; background:none; color:red; border:1px solid red; border-radius:10px;">ELIMINAR PUNTO</button>
     </div>
 </div>
 
@@ -118,87 +103,113 @@
     let stations = [];
     let currentIdx = null;
     let audioCtx = null;
-    let settings = JSON.parse(localStorage.getItem('soil_v16_settings')) || { bgTimers: true };
+    let settings = JSON.parse(localStorage.getItem('soil_v22_settings')) || { bgTimers: true };
 
-    // --- BASE DE DATOS INDEXED DB ---
-    const dbName = "InfiltrometerV16DB";
+    const dbName = "InfiltrometerV22DB";
     let db;
-
     const request = indexedDB.open(dbName, 1);
-    request.onupgradeneeded = (e) => {
-        db = e.target.result;
-        db.createObjectStore("stations", { keyPath: "id", autoIncrement: true });
-    };
-    request.onsuccess = (e) => {
-        db = e.target.result;
-        loadFromDB();
-    };
+    request.onupgradeneeded = (e) => { e.target.result.createObjectStore("stations", { keyPath: "id", autoIncrement: true }); };
+    request.onsuccess = (e) => { db = e.target.result; loadFromDB(); };
 
     function loadFromDB() {
         const store = db.transaction(["stations"], "readonly").objectStore("stations");
-        store.getAll().onsuccess = (e) => {
-            stations = e.target.result || [];
-            renderHistory();
-            startGlobalTicker();
-        };
+        store.getAll().onsuccess = (e) => { stations = e.target.result || []; renderHistory(); startGlobalTicker(); };
     }
 
-    function saveToDB(station) {
-        db.transaction(["stations"], "readwrite").objectStore("stations").put(station);
+    function saveToDB(station) { db.transaction(["stations"], "readwrite").objectStore("stations").put(station); }
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    // --- AUDIO ---
-    function playBip(freq, duration) {
-        try {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+    // ALARMA POTENTE REFORZADA
+    function playAlarm(freq, type) {
+        initAudio();
+        const now = audioCtx.currentTime;
+        const duration = type === 'short' ? 0.5 : 2.5;
+        const count = type === 'short' ? 1 : 5;
+
+        for (let i = 0; i < count; i++) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.frequency.value = freq;
-            gain.gain.value = 0.3;
-            osc.start();
-            setTimeout(() => osc.stop(), duration);
-        } catch(e) {}
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, now + (i * 0.5));
+            gain.gain.setValueAtTime(0, now + (i * 0.5));
+            gain.gain.linearRampToValueAtTime(0.8, now + (i * 0.5) + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + (i * 0.5) + 0.4);
+            osc.start(now + (i * 0.5));
+            osc.stop(now + (i * 0.5) + 0.4);
+        }
     }
 
-    // --- CRONÓMETRO ---
     function startGlobalTicker() {
         setInterval(() => {
             const now = Date.now();
             stations.forEach((s, i) => {
                 if (s.isRunning && s.startTime) {
-                    s.seconds = Math.floor((now - s.startTime) / 1000);
-                    const target = getTargetData(i);
-                    if (target) {
-                        const targetSecs = target.accumulatedMin * 60;
-                        if (s.seconds === targetSecs - 10) { playBip(600, 200); if(navigator.vibrate) navigator.vibrate(200); }
-                        if (s.seconds === targetSecs) { playBip(880, 1500); if(navigator.vibrate) navigator.vibrate([400,200,400]); }
+                    const newSecs = Math.floor((now - s.startTime) / 1000);
+                    if (newSecs !== s.seconds) {
+                        s.seconds = newSecs;
+                        const target = getTargetByTime(i);
+                        if (target) {
+                            const targetSecs = target.accumulatedMin * 60;
+                            // Alerta 10s antes (Solo una vez)
+                            if (s.seconds === targetSecs - 10 && s.lastAlarm !== 'short' + target.index) { 
+                                s.lastAlarm = 'short' + target.index;
+                                playAlarm(700, 'short');
+                                if(navigator.vibrate) navigator.vibrate(400);
+                            }
+                            // Alerta Meta (Solo una vez)
+                            if (s.seconds >= targetSecs && s.lastAlarm !== 'long' + target.index) { 
+                                s.lastAlarm = 'long' + target.index;
+                                playAlarm(500, 'long');
+                                if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+                            }
+                        }
                     }
                 }
             });
-            if (currentIdx !== null) updateUI();
+            if (currentIdx !== null) { updateUI(); updateHighlight(); }
         }, 1000);
     }
 
-    // --- GESTIÓN DE PUNTOS ---
+    function getTargetByTime(sIdx) {
+        const s = stations[sIdx];
+        const rows = s.rows;
+        let lastZeroIdx = 0;
+        for (let i = 0; i < rows.length; i++) { if (rows[i].time == 0) lastZeroIdx = i; }
+        let accMin = 0;
+        for (let i = lastZeroIdx + 1; i < rows.length; i++) {
+            accMin += parseFloat(rows[i].time || 0);
+            if (s.seconds < accMin * 60) {
+                let mC = 0; for(let j=1; j<=i; j++) if(rows[j].type === "NORMAL") mC++;
+                return { index: i, label: "M"+mC, accumulatedMin: accMin };
+            }
+        }
+        return null;
+    }
+
+    function updateHighlight() {
+        const target = getTargetByTime(currentIdx);
+        document.querySelectorAll('#measure-body tr').forEach(tr => tr.classList.remove('row-target'));
+        if (target) {
+            const tr = document.getElementById(`row-${currentIdx}-${target.index}`);
+            if (tr) tr.classList.add('row-target');
+            document.getElementById('target-label').innerText = `OBJ: ${target.label} (${target.accumulatedMin}m)`;
+        } else { document.getElementById('target-label').innerText = "FIN"; }
+    }
+
     function createNewStation() {
         const name = prompt("Nombre del punto:", "Punto " + (stations.length + 1));
         if (!name) return;
         const newStation = {
-            id: Date.now(),
-            name: name,
-            rows: Array.from({length: 11}, (_, i) => ({ 
-                time: i === 0 ? 0 : (i <= 5 ? 1 : 5), 
-                value: "", 
-                type: i === 0 ? "INICIAL" : "NORMAL" 
-            })),
-            seconds: 0, isRunning: false, startTime: null, isPendingRefill: false,
-            photos: [] // Array para múltiples fotos
+            id: Date.now(), name: name,
+            rows: Array.from({length: 11}, (_, i) => ({ time: i === 0 ? 0 : (i <= 5 ? 1 : 5), value: "", type: i === 0 ? "INICIAL" : "NORMAL" })),
+            seconds: 0, isRunning: false, startTime: null, isPendingRefill: false, photos: [], lastAlarm: ""
         };
-        stations.push(newStation);
-        saveToDB(newStation);
-        renderHistory();
+        stations.push(newStation); saveToDB(newStation); renderHistory();
     }
 
     function renderHistory() {
@@ -207,30 +218,103 @@
         stations.forEach((s) => {
             const div = document.createElement('div');
             div.className = 'station-item';
-            div.onclick = () => openStation(s.id);
-            div.innerHTML = `
-                <div class="station-info">
-                    <strong>${s.name}</strong> 
-                    <span class="status-pill ${s.isRunning ? 'active' : ''}">${s.isRunning ? 'ACTIVO' : 'STOP'}</span>
-                    <br><small>Mediciones: ${s.rows.filter(r=>r.value).length} | Fotos: ${s.photos.length}</small>
-                </div>
-                <div style="font-size:1.2em" onclick="event.stopPropagation(); renameStation(${s.id})">✏️</div>
-            `;
+            div.innerHTML = `<div class="station-info" onclick="openStation(${s.id})"><strong>${s.name}</strong> <span class="${s.isRunning ? 'status-on' : 'status-off'}">${s.isRunning ? 'ON' : 'OFF'}</span><br><small>Muestras: ${s.rows.filter(r=>r.value).length}</small></div><div class="station-actions"><span onclick="renameStationById(${s.id})">✏️</span><span onclick="deleteStationById(${s.id})">🗑️</span></div>`;
             list.appendChild(div);
         });
     }
 
     function openStation(id) {
         currentIdx = stations.findIndex(s => s.id === id);
-        const s = stations[currentIdx];
-        document.getElementById('home-screen').classList.add('hidden');
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
         document.getElementById('measurement-screen').classList.remove('hidden');
-        document.getElementById('active-station-name').innerText = s.name;
-        renderGallery();
-        renderTable();
+        document.getElementById('active-name').innerText = stations[currentIdx].name;
+        renderGallery(); renderTable();
     }
 
-    // --- FOTOS ---
+    function renderTable() {
+        const body = document.getElementById('measure-body');
+        const s = stations[currentIdx];
+        body.innerHTML = "";
+        let mC = 0, reC = 0;
+        s.rows.forEach((row, i) => {
+            let label = i === 0 ? "M0" : (row.type === "NORMAL" ? "M" + (++mC) : "RE" + String(++reC).padStart(2,'0'));
+            const tr = document.createElement('tr');
+            tr.id = `row-${currentIdx}-${i}`;
+            if (row.type === "RELLENO") tr.className = "row-refill";
+            tr.innerHTML = `<td>${label}</td><td><input type="number" value="${row.time}" onchange="updateCell(${i},'time',this.value)"></td><td><input type="number" step="any" value="${row.value}" oninput="updateCell(${i},'value',this.value)"></td><td>${row.type}</td>`;
+            body.appendChild(tr);
+        });
+    }
+
+    function updateCell(idx, field, val) {
+        stations[currentIdx].rows[idx][field] = val;
+        saveToDB(stations[currentIdx]);
+    }
+
+    function uiTimerStart() {
+        initAudio();
+        const s = stations[currentIdx];
+        if (s.isRunning) return;
+        s.isRunning = true; s.startTime = Date.now() - (s.seconds * 1000); s.isPendingRefill = false;
+        saveToDB(s); renderHistory();
+    }
+
+    function uiTimerStop() {
+        initAudio();
+        const s = stations[currentIdx];
+        s.isRunning = false; s.startTime = null; s.isPendingRefill = true;
+        saveToDB(s); renderHistory();
+    }
+
+    function uiTimerReset() {
+        initAudio();
+        const s = stations[currentIdx];
+        if (s.isPendingRefill) {
+            let target = getTargetByTime(currentIdx);
+            let insertIdx = target ? target.index : s.rows.length;
+            s.rows.splice(insertIdx, 0, { time: 0, value: "", type: "RELLENO" });
+            s.isPendingRefill = false;
+        }
+        s.isRunning = false; s.seconds = 0; s.startTime = null; s.lastAlarm = "";
+        saveToDB(s); renderTable(); updateUI();
+    }
+
+    function updateUI() {
+        const s = stations[currentIdx];
+        const m = Math.floor(s.seconds / 60);
+        const sec = s.seconds % 60;
+        document.getElementById('timer-display').innerText = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+    }
+
+    function renameStationById(id) {
+        const idx = stations.findIndex(s => s.id === id);
+        const n = prompt("Nuevo nombre:", stations[idx].name);
+        if (n) { stations[idx].name = n; saveToDB(stations[idx]); renderHistory(); }
+    }
+
+    function deleteStationById(id) {
+        if(confirm("¿Eliminar punto?")) {
+            db.transaction(["stations"], "readwrite").objectStore("stations").delete(id).onsuccess = () => {
+                stations = stations.filter(s => s.id !== id); renderHistory();
+            };
+        }
+    }
+
+    function deleteStationInternal() { deleteStationById(stations[currentIdx].id); goToHome(); }
+
+    function goToHome() {
+        if (!settings.bgTimers) stations.forEach(s => { s.isRunning = false; s.startTime = null; });
+        currentIdx = null;
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById('home-screen').classList.remove('hidden');
+        renderHistory();
+    }
+
+    function saveSettings() {
+        settings.bgTimers = document.getElementById('bg-timer-toggle').checked;
+        localStorage.setItem('soil_v22_settings', JSON.stringify(settings));
+    }
+
     function handlePhotoCapture(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -238,17 +322,12 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const max_size = 1000; 
-                    let w = img.width, h = img.height;
-                    if (w > h) { if (w > max_size) { h *= max_size / w; w = max_size; } }
-                    else { if (h > max_size) { w *= max_size / h; h = max_size; } }
+                    const max = 1000; let w = img.width, h = img.height;
+                    if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } }
                     canvas.width = w; canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    
-                    stations[currentIdx].photos.push(dataUrl);
-                    saveToDB(stations[currentIdx]);
-                    renderGallery();
+                    stations[currentIdx].photos.push(canvas.toDataURL('image/jpeg', 0.8));
+                    saveToDB(stations[currentIdx]); renderGallery();
                 };
                 img.src = e.target.result;
             };
@@ -259,172 +338,39 @@
     function renderGallery() {
         const container = document.getElementById('photo-gallery');
         container.innerHTML = "";
-        stations[currentIdx].photos.forEach((photo, i) => {
-            const div = document.createElement('div');
-            div.className = "photo-wrapper";
-            div.innerHTML = `
-                <img src="${photo}" class="photo-thumb">
-                <button class="btn-del-photo" onclick="deletePhoto(${i})">✕</button>
-            `;
-            container.appendChild(div);
+        stations[currentIdx].photos.forEach((p) => {
+            const img = document.createElement('img');
+            img.src = p; img.className = "photo-thumb";
+            container.appendChild(img);
         });
-    }
-
-    function deletePhoto(photoIdx) {
-        if(confirm("¿Eliminar esta foto?")) {
-            stations[currentIdx].photos.splice(photoIdx, 1);
-            saveToDB(stations[currentIdx]);
-            renderGallery();
-        }
-    }
-
-    // --- TABLA ---
-    function renderTable() {
-        const body = document.getElementById('measure-body');
-        const s = stations[currentIdx];
-        body.innerHTML = "";
-        const target = getTargetData(currentIdx);
-        let mC = 0; let reC = 0;
-
-        s.rows.forEach((row, i) => {
-            let label = i === 0 ? "M0" : (row.type === "NORMAL" ? "M" + (++mC) : "RE" + String(++reC).padStart(2,'0'));
-            const tr = document.createElement('tr');
-            if (row.type === "RELLENO") tr.className = "row-refill";
-            if (target && i === target.index) tr.className += " row-target";
-            tr.innerHTML = `
-                <td style="font-size:0.75em; font-weight:bold;">${label}</td>
-                <td><input type="number" value="${row.time}" onchange="updateCell(${i},'time',this.value)"></td>
-                <td><input type="number" step="any" inputmode="decimal" value="${row.value}" oninput="updateCell(${i},'value',this.value, false)"></td>
-                <td style="font-size:0.65em; color:#888">${row.type}</td>
-            `;
-            body.appendChild(tr);
-        });
-        document.getElementById('target-label').innerText = target ? `${target.label} en ${target.accumulatedMin}m` : "FIN";
-    }
-
-    function updateCell(idx, field, val, redraw = true) {
-        stations[currentIdx].rows[idx][field] = val;
-        saveToDB(stations[currentIdx]);
-        if (redraw) renderTable();
-    }
-
-    function getTargetData(sIdx) {
-        const s = stations[sIdx];
-        const idx = s.rows.findIndex((r, i) => i > 0 && r.value === "" && r.type === "NORMAL");
-        if (idx === -1) return null;
-        let acc = 0, mC = 0, label = "", lastZero = 0;
-        for (let i = 0; i < idx; i++) { if (s.rows[i].time == 0) lastZero = i; }
-        for (let i = 0; i < s.rows.length; i++) {
-            if (i > 0 && s.rows[i].type === "NORMAL") mC++;
-            if (i > lastZero && i <= idx) acc += parseFloat(s.rows[i].time || 0);
-            if (i === idx) label = "M" + mC;
-        }
-        return { index: idx, accumulatedMin: acc, label: label };
-    }
-
-    // --- BOTONES ---
-    function uiTimerStart() {
-        playBip(440, 50);
-        const s = stations[currentIdx];
-        if (s.isRunning) return;
-        s.isRunning = true;
-        s.startTime = Date.now() - (s.seconds * 1000);
-        s.isPendingRefill = false;
-        saveToDB(s);
-    }
-
-    function uiTimerStop() {
-        const s = stations[currentIdx];
-        s.isRunning = false; s.startTime = null; s.isPendingRefill = true;
-        saveToDB(s);
-        playBip(300, 200);
-    }
-
-    function uiTimerReset() {
-        const s = stations[currentIdx];
-        if (s.isPendingRefill) {
-            let targetIdx = s.rows.findIndex((r, i) => i > 0 && r.value === "" && r.type === "NORMAL");
-            if (targetIdx !== -1) s.rows.splice(targetIdx, 0, { time: 0, value: "", type: "RELLENO" });
-            s.isPendingRefill = false;
-        }
-        s.isRunning = false; s.seconds = 0; s.startTime = null;
-        saveToDB(s);
-        renderTable(); updateUI();
-    }
-
-    function updateUI() {
-        const s = stations[currentIdx];
-        const m = Math.floor(s.seconds / 60);
-        const sec = s.seconds % 60;
-        document.getElementById('timer-display').innerText = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-    }
-
-    function goToHome() {
-        if (!settings.bgTimers) stations.forEach(s => { s.isRunning = false; s.startTime = null; });
-        currentIdx = null;
-        document.getElementById('measurement-screen').classList.add('hidden');
-        document.getElementById('home-screen').classList.remove('hidden');
-        renderHistory();
-    }
-
-    function renameStation(id) {
-        const idx = stations.findIndex(s => s.id === id);
-        const n = prompt("Nuevo nombre:", stations[idx].name);
-        if(n) { stations[idx].name = n; saveToDB(stations[idx]); renderHistory(); }
-    }
-
-    function deleteStation() {
-        if(confirm("¿Eliminar punto definitivamente?")) {
-            const id = stations[currentIdx].id;
-            db.transaction(["stations"], "readwrite").objectStore("stations").delete(id).onsuccess = () => {
-                stations.splice(currentIdx, 1);
-                goToHome();
-            };
-        }
     }
 
     function addNewRow() {
         stations[currentIdx].rows.push({ time: 15, value: "", type: "NORMAL" });
-        saveToDB(stations[currentIdx]);
-        renderTable();
+        saveToDB(stations[currentIdx]); renderTable();
     }
 
-    function saveSettings() {
-        settings.bgTimers = document.getElementById('bg-timer-toggle').checked;
-        localStorage.setItem('soil_v16_settings', JSON.stringify(settings));
-    }
-
-    // --- ZIP EXPORT ---
     async function packageAllData() {
-        if (stations.length === 0) return alert("Sin datos.");
-        const zip = new JSZip();
-        const wb = XLSX.utils.book_new();
-        const photosFolder = zip.folder("Fotos_Proyecto");
-
+        if (stations.length === 0) return alert("Sin datos");
+        const zip = new JSZip(); const wb = XLSX.utils.book_new();
+        const photoFolder = zip.folder("Fotos");
         stations.forEach(s => {
-            // Excel
-            const excelData = [["Estación:", s.name], ["ID", "Tiempo (m)", "Lectura (cm)", "Tipo"]];
+            const data = [["Punto:", s.name], ["ID", "Tiempo (m)", "Lectura (cm)", "Tipo"]];
             let mC = 0, reC = 0;
             s.rows.forEach((r, i) => {
                 let lbl = i === 0 ? "M0" : (r.type === "NORMAL" ? "M" + (++mC) : "RE" + String(++reC).padStart(2,'0'));
-                excelData.push([lbl, r.time, r.value, r.type]);
+                data.push([lbl, r.time, r.value, r.type]);
             });
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(excelData), s.name.substring(0,30));
-
-            // Fotos
-            s.photos.forEach((p, idx) => {
-                const base64 = p.split(',')[1];
-                photosFolder.file(`${s.name.replace(/\s/g, '_')}_Foto${idx+1}.jpg`, base64, {base64: true});
-            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), s.name.substring(0,30));
+            s.photos.forEach((p, idx) => { photoFolder.file(`${s.name}_Foto${idx+1}.jpg`, p.split(',')[1], {base64: true}); });
         });
-
         zip.file("Datos_Infiltracion.xlsx", XLSX.write(wb, {bookType:'xlsx', type:'array'}));
         const content = await zip.generateAsync({type:"blob"});
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(content);
-        a.download = `Infiltracion_Suelos_${new Date().toISOString().slice(0,10)}.zip`;
-        a.click();
+        a.href = URL.createObjectURL(content); a.download = `Suelos_v22.zip`; a.click();
     }
+
+    window.onload = () => { document.getElementById('bg-timer-toggle').checked = settings.bgTimers; };
 </script>
 </body>
 </html>
