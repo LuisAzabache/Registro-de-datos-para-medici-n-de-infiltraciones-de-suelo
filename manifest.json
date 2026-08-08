@@ -1,8 +1,9 @@
 {
-  "name": "Infiltrómetro Pro v23",
+  "name": "Infiltrómetro Master Pro",
   "short_name": "Infiltrómetro",
-  "description": "App para medición de infiltración de suelos",
-  "start_url": "index.html",
+  "description": "App profesional de infiltración de suelos",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#000000",
@@ -11,7 +12,8 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1085/1085813.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
