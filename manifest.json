@@ -1,1 +1,17 @@
-
+{
+  "name": "Infiltrómetro Pro v23",
+  "short_name": "Infiltrómetro",
+  "description": "App para medición de infiltración de suelos",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1085/1085813.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
