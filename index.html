@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Infiltrómetro Master v23</title>
+    <title>Infiltrómetro Master Pro v24</title>
+    <!-- Configuración PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Librerías Externas (El Service Worker las guardará en caché) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <style>
         :root { --primary: #007bff; --stop: #ff9800; --reset: #dc3545; --bg: #f4f7f9; --text: #333; --success: #28a745; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); -webkit-tap-highlight-color: transparent; height: 100vh; overflow: hidden; }
         
+        /* CONTENEDORES DE PANTALLA */
         .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; z-index: 10; }
         .hidden { display: none !important; }
 
-        /* HEADER */
+        /* CABECERA FIJA CON CRONÓMETRO */
         .header-timer { position: sticky; top: 0; z-index: 1000; background: #000; color: #0f0; text-align: center; padding: 10px; border-bottom: 3px solid #333; }
         #timer-display { font-size: 3.8em; font-family: monospace; font-weight: bold; margin: 2px 0; }
         .timer-controls { display: flex; gap: 8px; justify-content: center; padding: 5px 10px; }
@@ -22,7 +30,7 @@
         .btn-stop { background: var(--stop); }
         .btn-reset { background: var(--reset); }
 
-        /* CONTENIDO */
+        /* INTERFAZ DE LISTA PRINCIPAL */
         .container { padding: 15px; flex-grow: 1; }
         .station-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 8px solid var(--primary); display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .station-info { flex-grow: 1; cursor: pointer; }
@@ -30,20 +38,24 @@
         .status-off { color: #000; font-weight: bold; }
         .station-actions { display: flex; gap: 20px; padding-left: 15px; font-size: 1.5em; align-items: center; }
 
-        /* TABLA */
-        .table-container { overflow-x: auto; background: white; border-radius: 12px; margin-top: 10px; }
+        /* TABLA DE MEDICIONES */
+        .table-container { overflow-x: auto; background: white; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 300px; }
         th, td { border-bottom: 1px solid #eee; padding: 15px 5px; text-align: center; }
-        input { width: 90%; padding: 12px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1.2em; text-align: center; }
+        th { background: #f8f9fa; font-size: 0.75em; color: #888; }
+        input { width: 90%; padding: 12px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 1.2em; text-align: center; background: #fff; }
         
+        /* ILUMINACIÓN POR TIEMPO */
         .row-target { background: #d1e7ff !important; outline: 3px solid var(--primary); font-weight: bold; }
         .row-refill { background: #fff3cd !important; }
         
+        /* GALERÍA */
         .gallery { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; }
         .photo-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid #ddd; }
         
-        .btn-main { width: 100%; padding: 20px; font-size: 1.1em; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-main { width: 100%; padding: 20px; font-size: 1.1em; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,123,255,0.3); cursor: pointer; margin-bottom: 15px; }
 
+        /* TOGGLE MULTITAREA */
         .settings-card { background: white; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; margin-top: 15px; border: 1px solid #ddd; }
         .switch { position: relative; width: 50px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -55,19 +67,26 @@
 </head>
 <body>
 
+<!-- PANTALLA PRINCIPAL -->
 <div id="home-screen" class="screen">
-    <div style="background: #333; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.2em;">INFILTRÓMETRO PRO V23</div>
+    <div style="background: #333; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.2em;">INFILTRÓMETRO MASTER V24</div>
     <div class="container">
         <button class="btn-main" onclick="createNewStation()">+ NUEVO PUNTO DE MEDICIÓN</button>
         <div id="station-list"></div>
+
         <div class="settings-card">
-            <div><strong>⏱️ Modo Multitarea</strong><br><small>El tiempo sigue al salir del punto</small></div>
-            <label class="switch"><input type="checkbox" id="bg-timer-toggle" onchange="saveSettings()" checked><span class="slider"></span></label>
+            <div><strong>⏱️ Modo Multitarea</strong><br><small>El tiempo sigue activo al salir</small></div>
+            <label class="switch">
+                <input type="checkbox" id="bg-timer-toggle" onchange="saveSettings()" checked>
+                <span class="slider"></span>
+            </label>
         </div>
-        <button onclick="packageAllData()" style="width: 100%; padding: 16px; background: #444; color: white; border: none; border-radius: 10px; font-weight: bold; margin-top: 20px;">📦 EXPORTAR PROYECTO (ZIP)</button>
+
+        <button onclick="packageAllData()" style="width: 100%; padding: 16px; background: #444; color: white; border: none; border-radius: 10px; font-weight: bold; margin-top: 20px; cursor: pointer;">📦 EXPORTAR PROYECTO (ZIP)</button>
     </div>
 </div>
 
+<!-- PANTALLA DE MEDICIÓN -->
 <div id="measurement-screen" class="screen hidden">
     <div class="header-timer">
         <div style="display:flex; justify-content: space-between; font-size: 0.75em; align-items: center;">
@@ -82,12 +101,14 @@
             <button class="btn-t btn-reset" onclick="uiTimerReset()">Restablecer</button>
         </div>
     </div>
+
     <div class="container">
         <div class="card" style="margin-bottom:10px; padding:10px">
             <div id="photo-gallery" class="gallery"></div>
             <input type="file" id="camera-input" accept="image/*" capture="camera" class="hidden" onchange="handlePhotoCapture(this)">
-            <button onclick="document.getElementById('camera-input').click()" style="width:100%; padding:10px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold;">📸 AÑADIR FOTO</button>
+            <button onclick="document.getElementById('camera-input').click()" style="width:100%; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold;">📸 AÑADIR FOTO</button>
         </div>
+
         <div class="table-container">
             <table>
                 <thead><tr><th>ID</th><th>Tiempo (m)</th><th>Lectura (cm)</th><th>Tipo</th></tr></thead>
@@ -95,17 +116,25 @@
             </table>
         </div>
         <button onclick="addNewRow()" style="width:100%; padding:18px; margin-top:12px; background:var(--primary); color:white; border:none; border-radius:12px; font-weight:bold;">+ AÑADIR CASILLA</button>
-        <button onclick="deleteStationInternal()" style="width:100%; padding:10px; margin-top:30px; background:none; color:red; border:1px solid red; border-radius:10px;">ELIMINAR PUNTO</button>
+        <button onclick="deleteStationInternal()" style="width:100%; padding:10px; margin-top:30px; background:none; color:red; border:1px solid red; border-radius:10px; cursor:pointer;">ELIMINAR ESTE PUNTO</button>
     </div>
 </div>
 
 <script>
+    // --- 1. REGISTRO DE SERVICE WORKER (PARA MODO OFFLINE) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').then(() => console.log('Offline Ready'));
+        });
+    }
+
     let stations = [];
     let currentIdx = null;
     let audioCtx = null;
-    let settings = JSON.parse(localStorage.getItem('soil_v23_settings')) || { bgTimers: true };
+    let settings = JSON.parse(localStorage.getItem('soil_v24_settings')) || { bgTimers: true };
 
-    const dbName = "InfiltrometerV23DB";
+    // --- 2. BASE DE DATOS (INDEXED DB) ---
+    const dbName = "InfiltrometerV24DB";
     let db;
     const request = indexedDB.open(dbName, 1);
     request.onupgradeneeded = (e) => { e.target.result.createObjectStore("stations", { keyPath: "id", autoIncrement: true }); };
@@ -118,31 +147,27 @@
 
     function saveToDB(station) { db.transaction(["stations"], "readwrite").objectStore("stations").put(station); }
 
+    // --- 3. MOTOR DE ALARMAS POTENTES ---
     function initAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    // SONIDO MEJORADO (VERSIÓN 23)
     function playAlarm(freq, type) {
         initAudio();
         const now = audioCtx.currentTime;
-        
-        if (type === 'short') {
+        if (type === 'short') { // Alerta 10 segundos antes
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'square'; osc.frequency.setValueAtTime(freq, now);
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.type = 'square'; osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.5, now);
             osc.start(now); osc.stop(now + 0.5);
-        } else {
-            // Alarma continua de 2 segundos para tiempo cumplido
+        } else { // Alerta tiempo cumplido (Pitido de 2 segundos)
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'square'; osc.frequency.setValueAtTime(freq, now);
+            osc.type = 'square'; osc.frequency.value = freq;
             gain.gain.setValueAtTime(0, now);
             gain.gain.linearRampToValueAtTime(0.8, now + 0.1);
             gain.gain.setValueAtTime(0.8, now + 1.9);
@@ -151,6 +176,7 @@
         }
     }
 
+    // --- 4. CRONÓMETRO GLOBAL ---
     function startGlobalTicker() {
         setInterval(() => {
             const now = Date.now();
@@ -160,26 +186,18 @@
                     if (newSecs !== s.seconds) {
                         s.seconds = newSecs;
                         
-                        // RECORRER TODAS LAS FILAS PARA BUSCAR ALERTAS
-                        let accMin = 0;
-                        let lastZeroIdx = 0;
-                        for (let j = 0; j < s.rows.length; j++) { if (s.rows[j].time == 0) lastZeroIdx = j; }
-
-                        for (let j = lastZeroIdx + 1; j < s.rows.length; j++) {
+                        // Lógica de Alertas
+                        let accMin = 0; let lastZero = 0;
+                        for (let j = 0; j < s.rows.length; j++) { if (s.rows[j].time == 0) lastZero = j; }
+                        for (let j = lastZero + 1; j < s.rows.length; j++) {
                             accMin += parseFloat(s.rows[j].time || 0);
                             const targetSecs = accMin * 60;
-
-                            // Alerta 10s antes
-                            if (s.seconds === targetSecs - 10 && s.lastAlarm !== 'short' + j) {
-                                s.lastAlarm = 'short' + j;
-                                playAlarm(700, 'short');
-                                if(navigator.vibrate) navigator.vibrate(400);
+                            
+                            if (s.seconds === targetSecs - 10 && s.lastA !== 's' + j) {
+                                s.lastA = 's' + j; playAlarm(700, 'short'); if(navigator.vibrate) navigator.vibrate(300);
                             }
-                            // Alerta Tiempo Cumplido (Bip prolongado)
-                            if (s.seconds === targetSecs && s.lastAlarm !== 'long' + j) {
-                                s.lastAlarm = 'long' + j;
-                                playAlarm(500, 'long');
-                                if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+                            if (s.seconds === targetSecs && s.lastA !== 'l' + j) {
+                                s.lastA = 'l' + j; playAlarm(500, 'long'); if(navigator.vibrate) navigator.vibrate([500,200,500,200,500]);
                             }
                         }
                     }
@@ -192,10 +210,10 @@
     function getTargetByTime(sIdx) {
         const s = stations[sIdx];
         const rows = s.rows;
-        let lastZeroIdx = 0;
-        for (let i = 0; i < rows.length; i++) { if (rows[i].time == 0) lastZeroIdx = i; }
+        let lastZero = 0;
+        for (let i = 0; i < rows.length; i++) { if (rows[i].time == 0) lastZero = i; }
         let accMin = 0;
-        for (let i = lastZeroIdx + 1; i < rows.length; i++) {
+        for (let i = lastZero + 1; i < rows.length; i++) {
             accMin += parseFloat(rows[i].time || 0);
             if (s.seconds < accMin * 60) {
                 let mC = 0; for(let j=1; j<=i; j++) if(rows[j].type === "NORMAL") mC++;
@@ -215,13 +233,14 @@
         } else { document.getElementById('target-label').innerText = "FIN"; }
     }
 
+    // --- 5. GESTIÓN DE PUNTOS ---
     function createNewStation() {
         const name = prompt("Nombre del punto:", "Punto " + (stations.length + 1));
         if (!name) return;
         const newStation = {
             id: Date.now(), name: name,
             rows: Array.from({length: 11}, (_, i) => ({ time: i === 0 ? 0 : (i <= 5 ? 1 : 5), value: "", type: i === 0 ? "INICIAL" : "NORMAL" })),
-            seconds: 0, isRunning: false, startTime: null, isPendingRefill: false, photos: [], lastAlarm: ""
+            seconds: 0, isRunning: false, startTime: null, isPendingRefill: false, photos: [], lastA: ""
         };
         stations.push(newStation); saveToDB(newStation); renderHistory();
     }
@@ -232,15 +251,9 @@
         stations.forEach((s) => {
             const div = document.createElement('div');
             div.className = 'station-item';
-            div.innerHTML = `<div class="station-info" onclick="openStation(${s.id})"><strong>${s.name}</strong> <span class="${s.isRunning ? 'status-on' : 'status-off'}">${s.isRunning ? 'ON' : 'OFF'}</span><br><small>Muestras: ${s.rows.filter(r=>r.value).length}</small></div><div class="station-actions"><span onclick="renameStationById(${s.id})">✏️</span><span onclick="deleteStationById(${s.id})">🗑️</span></div>`;
+            div.innerHTML = `<div class="station-info" onclick="openStation(${s.id})"><strong>${s.name}</strong> <span class="${s.isRunning ? 'status-on' : 'status-off'}">${s.isRunning ? 'ON' : 'OFF'}</span><br><small>Muestras: ${s.rows.filter(r=>r.value).length}</small></div><div class="station-actions"><span onclick="renameById(${s.id})">✏️</span><span onclick="deleteById(${s.id})">🗑️</span></div>`;
             list.appendChild(div);
         });
-    }
-
-    function renameStationById(id) {
-        const idx = stations.findIndex(s => s.id === id);
-        const n = prompt("Nuevo nombre:", stations[idx].name);
-        if (n) { stations[idx].name = n; saveToDB(stations[idx]); renderHistory(); }
     }
 
     function openStation(id) {
@@ -248,13 +261,12 @@
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
         document.getElementById('measurement-screen').classList.remove('hidden');
         document.getElementById('active-name').innerText = stations[currentIdx].name;
-        renderGallery(); renderTable();
+        renderGallery(); renderTable(); updateHighlight();
     }
 
     function renderTable() {
         const body = document.getElementById('measure-body');
-        const s = stations[currentIdx];
-        body.innerHTML = "";
+        const s = stations[currentIdx]; body.innerHTML = "";
         let mC = 0, reC = 0;
         s.rows.forEach((row, i) => {
             let label = i === 0 ? "M0" : (row.type === "NORMAL" ? "M" + (++mC) : "RE" + String(++reC).padStart(2,'0'));
@@ -271,6 +283,7 @@
         saveToDB(stations[currentIdx]);
     }
 
+    // --- 6. CONTROLES ---
     function uiTimerStart() {
         initAudio();
         const s = stations[currentIdx];
@@ -295,26 +308,31 @@
             s.rows.splice(insertIdx, 0, { time: 0, value: "", type: "RELLENO" });
             s.isPendingRefill = false;
         }
-        s.isRunning = false; s.seconds = 0; s.startTime = null; s.lastAlarm = "";
+        s.isRunning = false; s.seconds = 0; s.startTime = null; s.lastA = "";
         saveToDB(s); renderTable(); updateUI();
     }
 
     function updateUI() {
         const s = stations[currentIdx];
-        const m = Math.floor(s.seconds / 60);
-        const sec = s.seconds % 60;
+        const m = Math.floor(s.seconds / 60); const sec = s.seconds % 60;
         document.getElementById('timer-display').innerText = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     }
 
-    function deleteStationById(id) {
-        if(confirm("¿Eliminar punto?")) {
+    function renameById(id) {
+        const idx = stations.findIndex(s => s.id === id);
+        const n = prompt("Nuevo nombre:", stations[idx].name);
+        if (n) { stations[idx].name = n; saveToDB(stations[idx]); renderHistory(); }
+    }
+
+    function deleteById(id) {
+        if(confirm("¿Eliminar definitivamente?")) {
             db.transaction(["stations"], "readwrite").objectStore("stations").delete(id).onsuccess = () => {
                 stations = stations.filter(s => s.id !== id); renderHistory();
             };
         }
     }
 
-    function deleteStationInternal() { deleteStationById(stations[currentIdx].id); goToHome(); }
+    function deleteStationInternal() { deleteById(stations[currentIdx].id); goToHome(); }
 
     function goToHome() {
         if (!settings.bgTimers) stations.forEach(s => { s.isRunning = false; s.startTime = null; });
@@ -326,7 +344,7 @@
 
     function saveSettings() {
         settings.bgTimers = document.getElementById('bg-timer-toggle').checked;
-        localStorage.setItem('soil_v23_settings', JSON.stringify(settings));
+        localStorage.setItem('soil_v24_settings', JSON.stringify(settings));
     }
 
     function handlePhotoCapture(input) {
@@ -381,10 +399,12 @@
         zip.file("Datos_Infiltracion.xlsx", XLSX.write(wb, {bookType:'xlsx', type:'array'}));
         const content = await zip.generateAsync({type:"blob"});
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(content); a.download = `Suelos_v23.zip`; a.click();
+        a.href = URL.createObjectURL(content); a.download = `Infiltracion_Suelos.zip`; a.click();
     }
 
-    window.onload = () => { document.getElementById('bg-timer-toggle').checked = settings.bgTimers; };
+    window.onload = () => { 
+        document.getElementById('bg-timer-toggle').checked = settings.bgTimers; 
+    };
 </script>
 </body>
 </html>
